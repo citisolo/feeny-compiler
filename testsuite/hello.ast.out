@@ -1,0 +1,20 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<method_statement>:
+		name:main
+		nargs:0
+		args:
+		body:
+		<expression_statement>:
+			<print_expression>:
+				format:Hello World
+
+				args:
+	b:
+	<expression_statement>:
+		<call_expression>:
+			name:main
+			args:
+			0
+

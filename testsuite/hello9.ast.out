@@ -1,0 +1,41 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<method_statement>:
+		name:main
+		nargs:0
+		args:
+		body:
+		<sequence_statement>:
+			a:
+			<var statement>:
+				name:i
+				val:
+				<int_expresion>:
+					val:0
+			b:
+			<expression_statement>:
+				<while_statement>:
+					predicate: 
+					<ref_expression>:
+						name:i
+					body: 
+					<sequence_statement>:
+						a:
+						<expression_statement>:
+							<print_expression>:
+								format:Do one iteration
+
+								args:
+						b:
+						<expression_statement>:
+							<set_expression>:
+								name:i
+								<null_expression>:
+	b:
+	<expression_statement>:
+		<call_expression>:
+			name:main
+			args:
+			0
+

@@ -1,0 +1,19 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<var statement>:
+		name:one
+		val:
+		<int_expresion>:
+			val:1
+	b:
+	<expression_statement>:
+		<call_slot_expression>:
+			reciever: 
+			<int_expresion>:
+				val:1
+			message: add
+			args: 
+			<int_expresion>:
+				val:1
+

@@ -10,7 +10,23 @@
 Program* image ;
 int   const_index;
 int scope_level;
+int RANDNUM;
 
+char* int_to_id(int id ){
+	char* str = malloc(sizeof(int)*8+1);
+	snprintf(str,sizeof(int)*8+1,"%d", id);
+	return str;
+}
+
+char* concat(char *s1, char *s2){
+    size_t len1 = strlen(s1);
+    size_t len2 = strlen(s2);
+    char *result = malloc(len1+len2+1);//+1 for the zero-terminator
+    //in real code you would check for errors in malloc here
+    memcpy(result, s1, len1);
+    memcpy(result+len1, s2, len2+1);//+1 to copy the null-terminator
+    return result;
+}
 
 void* allocate_obj(ValTag tag){
 	Value* res ;
@@ -23,7 +39,8 @@ void* allocate_obj(ValTag tag){
 			break;
 		}
 		case NULL_VAL:{
-			res = NULL;
+			res = (Value*) malloc(sizeof(Value*));
+			res->tag = NULL_VAL;
 			break;
 		}
 		case STRING_VAL:{
@@ -85,7 +102,8 @@ CompileState* compile_state;
 
 #define ADD_INS(state, ins) SemanticRecord* frame = record_current_frame(state);\
                      vector_add(frame->fn->code, ins);
-#define LOCSCOPE     state->nestlevel > 0
+#define ADD_GLOBAL(state, val) vector_add(state->globals, val);
+#define LOCSCOPE     (state->nestlevel > 0)
 
 void emit_exp ( CompileState* state, Exp* e);
 void emit_scopestmt (CompileState* state, ScopeStmt* s);
@@ -100,6 +118,7 @@ void init(){
 	image->values = make_vector();
 	image->slots = make_vector();
 	const_index = 0;
+	RANDNUM = 34;
 }
 
 CompileState* compile_state_init(){
@@ -213,7 +232,7 @@ int gen_ref(CompileState* state, char* name ){
 	}else{
         gen_global_ref(state, name);
 	}
-    
+    RANDNUM++;
     return index;
  }
  
@@ -233,7 +252,6 @@ int gen_slot(CompileState* state, int index){
 
 int gen_method(CompileState* state, MethodValue* fn){
 	int index = add_const(state->constants, fn);
-	vector_add(state->globals, index);
 	return index; 
 }
 
@@ -260,7 +278,7 @@ void gen_get_local_ins(CompileState* state, int index){
 
 void gen_get_global_ins(CompileState* state, int index){
 	GetLocalIns* ins = malloc(sizeof(GetGlobalIns));
-	ins->tag = GET_LOCAL_OP;
+	ins->tag = GET_GLOBAL_OP;
 	ins->idx = index;
 	ADD_INS(state, ins);	
 }
@@ -300,6 +318,19 @@ void gen_return(CompileState* state){
 	ADD_INS(state, ins);
 }
 
+
+void gen_print_ins(CompileState* state, int format_index, int arity){
+	PrintfIns* ins = malloc(sizeof(PrintfIns));
+	ins->tag = PRINTF_OP;
+	ins->format = format_index;
+	ins->arity = arity;
+	ADD_INS(state, ins);
+}
+
+char* gen_unique_name(char* name){
+	return concat(name, int_to_id(RANDNUM++));
+}
+
 void compile_var_stmt(CompileState* state, ScopeVar* stmt){
 	int slot_index;
 	emit_exp(state, stmt->exp);
@@ -311,6 +342,7 @@ void compile_var_stmt(CompileState* state, ScopeVar* stmt){
 		int index = gen_global_ref(state, stmt->name);
 	    gen_set_global_ins(state, index);
 	    slot_index = gen_slot(state, index);
+	    ADD_GLOBAL(state, slot_index);
 	}
 	
 	
@@ -346,16 +378,54 @@ void compile_fn_stmt(CompileState* state, ScopeFn* fn){
      gen_return(state);
      int fnref = gen_global_ref(state, fn->name);
      method->name = fnref;
-     gen_method(state, method);
+     int index = gen_method(state, method);
+     
      record_pop(state);
-      
+     if(!LOCSCOPE){ADD_GLOBAL(state, index);} 
     	
 }
 
 void compile_call_exp(CompileState* state, CallExp* exp){
 	MethodValue* fn = lookup_global(state, exp->name);
 	gen_call_ins(state, fn);
+	gen_drop(state);
 }
+
+int compile_program(CompileState* compile_state, ScopeStmt* stmt){
+  MethodValue* entry = allocate_obj(METHOD_VAL);
+  SemanticRecord* globalscope = record_new(entry);
+  record_push(compile_state, globalscope);
+  
+  emit_scopestmt(compile_state, stmt);
+  Value* null = allocate_obj(NULL_VAL);
+  
+  gen_lit_ins(compile_state, add_const(compile_state->constants, null));
+  gen_return(compile_state);
+  char* funcname = gen_unique_name("entry");
+  int entry_index = gen_global_ref(compile_state, funcname);
+  entry->nargs = 0;
+  entry->name = entry_index;
+
+  int index = gen_method(compile_state, entry);
+  record_pop(compile_state);
+  return index;
+}
+
+void compile_null_exp(CompileState* state){
+    Value* null = allocate_obj(NULL_VAL);
+	gen_lit_ins(state, add_const(compile_state->constants, null));
+}
+
+
+void compile_print_exp(CompileState* state, PrintfExp* exp){
+	for(int i = 0; i<exp->nexps; i++){
+		emit_exp(state, exp->exps[i]);
+	}
+	int formatref = gen_global_ref(state, exp->format);
+	gen_print_ins(state, formatref, exp->nexps);
+	gen_drop(state);
+}
+
 
 void emit_exp ( CompileState* state, Exp* e) {
   
@@ -367,18 +437,12 @@ void emit_exp ( CompileState* state, Exp* e) {
     break;
   }
   case NULL_EXP:{
-    printf("null");
+    compile_null_exp(state);
     break;
   }
   case PRINTF_EXP:{
     PrintfExp* e2 = (PrintfExp*)e;
-    printf("printf(");
-    print_string(e2->format);
-    for(int i=0; i<e2->nexps; i++){
-      printf(", ");
-      print_exp(e2->exps[i]);
-    }
-    printf(")");
+    compile_print_exp(state, e);
     break;
   }
   case ARRAY_EXP:{
@@ -427,13 +491,6 @@ void emit_exp ( CompileState* state, Exp* e) {
   case CALL_EXP:{
     CallExp* e2 = (CallExp*)e;
     compile_call_exp(state, e2);
-    /*
-    printf("%s(", e2->name);
-    for(int i=0; i<e2->nargs; i++){
-      if(i > 0) printf(", ");
-      print_exp(e2->args[i]);
-    }
-    printf(")");*/
     break;
   }
   case SET_EXP:{
@@ -444,6 +501,7 @@ void emit_exp ( CompileState* state, Exp* e) {
   }
   case IF_EXP:{
     IfExp* e2 = (IfExp*)e;
+    
     printf("if ");
     print_exp(e2->pred);
     printf(" : (");
@@ -533,26 +591,15 @@ void emit_scopestmt (CompileState* state, ScopeStmt* s) {
 }
 
 Program* compile (ScopeStmt* stmt) {
-  printf("Compiling Program:\n");
+  /*printf("Compiling Program:\n");*/
   init();
   CompileState* compile_state = compile_state_init();
-  MethodValue* entry = allocate_obj(METHOD_VAL);
-  SemanticRecord* globalscope = record_new(entry);
-  record_push(compile_state, globalscope);
-  
-  emit_scopestmt(compile_state, stmt);
-  gen_return(compile_state);
-  int entry_index = gen_global_ref(compile_state, "entry");
-  entry->nargs = 0;
-  entry->name = entry_index;
-  
-  gen_method(compile_state, entry);
-  record_pop(compile_state);
+  int entry_index = compile_program(compile_state, stmt);
   
   image->values = compile_state->constants;
   image->slots = compile_state->globals;
   image->entry = entry_index;
-  printf("\n");
+  /*printf("\n");*/
   
   return image;
 }

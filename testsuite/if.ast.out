@@ -1,0 +1,16 @@
+Interpret program:
+<expression_statement>:
+	<if_expression>:
+		<int_expresion>:
+			val:0
+		<expression_statement>:
+			<print_expression>:
+				format:Hello
+
+				args:
+		<expression_statement>:
+			<print_expression>:
+				format:World
+
+				args:
+

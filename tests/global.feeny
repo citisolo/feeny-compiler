@@ -1,0 +1,10 @@
+var head = 5
+
+
+defn main () :
+   var a = 4
+   a
+
+
+main()
+;var head = 5 defn main () : (var a = head a) main()

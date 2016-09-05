@@ -1,0 +1,18 @@
+#!/bin/bash 
+echo "***********************************************************************"
+echo "                  Testing Global                                       "
+echo "***********************************************************************"
+
+prog=../cfeeny
+tst=$1
+
+$prog output/$tst.ast > testsuite/$tst.out.test
+numlines=$(diff testsuite/$tst.out.test $tst.out | wc -l)
+if [ "$numlines" -gt 4 ]
+then
+    echo  "Test Fail:{$tst}"
+    diff $tst.out.test $tst.out
+else
+    echo  "Test Pass:{$tst}"
+fi
+rm $tst.out.test

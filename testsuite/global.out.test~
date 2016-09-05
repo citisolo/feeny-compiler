@@ -1,0 +1,27 @@
+Interpreting Bytecode Program:
+Constants :
+   #0: Int(5)
+   #1: String("head")
+   #2: Slot(#1)
+   #3: Int(4)
+   #4: String("main")
+   #5: Method(#4, nargs:0, nlocals:1) :
+         lit #3
+         set local 0
+         drop
+         get local 0
+         return
+   #6: Null
+   #7: String("entry36")
+   #8: Method(#7, nargs:0, nlocals:0) :
+         lit #0
+         set global #1
+         drop
+         call #4 0
+         drop
+         lit #6
+         return
+Globals :
+   #2
+   #5
+Entry : #8

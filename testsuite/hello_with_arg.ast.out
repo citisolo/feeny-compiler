@@ -1,0 +1,16 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<var statement>:
+		name:i
+		val:
+		<int_expresion>:
+			val:10
+	b:
+	<expression_statement>:
+		<print_expression>:
+			format:Hello
+			args:
+			<ref_expression>:
+				name:i
+

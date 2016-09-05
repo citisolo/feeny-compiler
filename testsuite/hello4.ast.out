@@ -1,0 +1,66 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<method_statement>:
+		name:hello
+		nargs:1
+		args:
+		i
+		body:
+		<expression_statement>:
+			<print_expression>:
+				format:Hello ~ 
+				args:
+				<ref_expression>:
+					name:i
+	b:
+	<sequence_statement>:
+		a:
+		<method_statement>:
+			name:world
+			nargs:2
+			args:
+			j
+			k
+			body:
+			<expression_statement>:
+				<print_expression>:
+					format:World ~ ~
+
+					args:
+					<ref_expression>:
+						name:j
+					<ref_expression>:
+						name:k
+		b:
+		<sequence_statement>:
+			a:
+			<method_statement>:
+				name:main
+				nargs:0
+				args:
+				body:
+				<sequence_statement>:
+					a:
+					<expression_statement>:
+						<call_expression>:
+							name:hello
+							args:
+							<int_expresion>:
+								val:3
+					b:
+					<expression_statement>:
+						<call_expression>:
+							name:world
+							args:
+							<int_expresion>:
+								val:4
+							<int_expresion>:
+								val:5
+			b:
+			<expression_statement>:
+				<call_expression>:
+					name:main
+					args:
+					0
+

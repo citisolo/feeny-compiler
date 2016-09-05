@@ -1,0 +1,21 @@
+Interpreting Bytecode Program:
+Constants :
+   #0: Int(1)
+   #1: String("one")
+   #2: Slot(#1)
+   #3: String("add")
+   #4: Null
+   #5: String("entry35")
+   #6: Method(#5, nargs:0, nlocals:0) :
+         lit #0
+         set global #1
+         drop
+         lit #0
+         lit #0
+         call-slot #3 2
+         drop
+         lit #4
+         return
+Globals :
+   #2
+Entry : #6

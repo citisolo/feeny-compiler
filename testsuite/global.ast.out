@@ -1,0 +1,34 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<var statement>:
+		name:head
+		val:
+		<int_expresion>:
+			val:5
+	b:
+	<sequence_statement>:
+		a:
+		<method_statement>:
+			name:main
+			nargs:0
+			args:
+			body:
+			<sequence_statement>:
+				a:
+				<var statement>:
+					name:a
+					val:
+					<int_expresion>:
+						val:4
+				b:
+				<expression_statement>:
+					<ref_expression>:
+						name:a
+		b:
+		<expression_statement>:
+			<call_expression>:
+				name:main
+				args:
+				0
+

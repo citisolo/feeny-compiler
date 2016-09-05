@@ -1,0 +1,146 @@
+Interpret program:
+<sequence_statement>:
+	a:
+	<method_statement>:
+		name:base
+		nargs:0
+		args:
+		body:
+		<expression_statement>:
+			<object_expression>:
+				slots: 
+				<method_statement>:
+					name:do-op
+					nargs:2
+					args:
+						x
+						y
+					body:
+					<sequence_statement>:
+						a:
+						<expression_statement>:
+							<print_expression>:
+								format:Do a binary operation on ~ and ~.
+
+								args:
+								<ref_expression>:
+									name:x
+								<ref_expression>:
+									name:y
+						b:
+						<expression_statement>:
+							<print_expression>:
+								format:Result = ~.
+
+								args:
+								<call_slot_expression>:
+									reciever: 
+									<ref_expression>:
+										name:this
+									message: op
+									args: 
+									<ref_expression>:
+										name:x
+									<ref_expression>:
+										name:y
+	b:
+	<sequence_statement>:
+		a:
+		<method_statement>:
+			name:adder
+			nargs:0
+			args:
+			body:
+			<expression_statement>:
+				<object_expression>:
+					slots: 
+					<method_statement>:
+						name:op
+						nargs:2
+						args:
+							x
+							y
+						body:
+						<expression_statement>:
+							<call_slot_expression>:
+								reciever: 
+								<ref_expression>:
+									name:x
+								message: add
+								args: 
+								<ref_expression>:
+									name:y
+		b:
+		<sequence_statement>:
+			a:
+			<method_statement>:
+				name:multiplier
+				nargs:0
+				args:
+				body:
+				<expression_statement>:
+					<object_expression>:
+						slots: 
+						<method_statement>:
+							name:op
+							nargs:2
+							args:
+								x
+								y
+							body:
+							<expression_statement>:
+								<call_slot_expression>:
+									reciever: 
+									<ref_expression>:
+										name:x
+									message: mul
+									args: 
+									<ref_expression>:
+										name:y
+			b:
+			<sequence_statement>:
+				a:
+				<var statement>:
+					name:a
+					val:
+					<call_expression>:
+						name:adder
+						args:
+						0
+				b:
+				<sequence_statement>:
+					a:
+					<var statement>:
+						name:m
+						val:
+						<call_expression>:
+							name:multiplier
+							args:
+							0
+					b:
+					<sequence_statement>:
+						a:
+						<expression_statement>:
+							<call_slot_expression>:
+								reciever: 
+								<ref_expression>:
+									name:a
+								message: do-op
+								args: 
+								<int_expresion>:
+									val:11
+								<int_expresion>:
+									val:7
+						b:
+						<expression_statement>:
+							<call_slot_expression>:
+								reciever: 
+								<ref_expression>:
+									name:m
+								message: do-op
+								args: 
+								<int_expresion>:
+									val:11
+								<int_expresion>:
+									val:7
+

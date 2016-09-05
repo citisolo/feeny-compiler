@@ -1,0 +1,2 @@
+var i = 10
+printf("Hello", i)
