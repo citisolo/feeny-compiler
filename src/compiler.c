@@ -97,7 +97,7 @@ typedef struct {
 	int nestlevel;
 }CompileState;
 
-CompileState* compile_state;
+
 
 
 #define ADD_INS(state, ins) SemanticRecord* frame = record_current_frame(state);\
@@ -130,10 +130,52 @@ CompileState* compile_state_init(){
 	return compile_state;
 }
 
+
+
+int check_symbol_exists(Vector* constants, Value* value){
+	int res;
+	for(int it = 0; it < constants->size; it++){
+		Value* constant = vector_get(constants, it);
+		if(constant->tag == INT_VAL && value->tag == INT_VAL){
+			IntValue* c2 = (IntValue*)constant;
+			IntValue* v2 = (IntValue*)value;
+			if(c2->value == v2->value){
+				res = it;
+				free(value);
+				goto end;
+			}
+		}
+		else if(constant->tag == STRING_VAL && value->tag == STRING_VAL){
+			StringValue* c2 = (StringValue*)constant;
+			StringValue* v2 = (StringValue*)value;
+			if(c2->value ==	v2->value){
+		        res = it;
+		        free(value);
+		        goto end;
+		    }
+	    }
+	    else if(constant->tag == NULL_VAL && value->tag == NULL_VAL){
+		    res = it;
+		    free(value);
+		    goto end;
+		    
+	    }
+	    else{
+			res = -1;
+		}
+	}
+	
+	end:
+	return res;
+}
+
 int add_const( Vector* vec, Value* val){
 	int index;
-	vector_add(vec, val);
-	index = vec->size-1;
+	index = check_symbol_exists(vec, val);
+	if(index == -1){
+	   vector_add(vec, val);
+	   index = vec->size-1;
+    }
 	return index;
 
 }
@@ -197,6 +239,7 @@ int lookup(CompileState* state, char* key){
 	return index;
 }
 
+/*FIXME: change this to incorporate slot statements a*/
 MethodValue* lookup_global(CompileState* state, char* name){
 	MethodValue* fn ;
 	for(int jt = 0; jt<state->globals->size; jt++){
@@ -224,15 +267,15 @@ int gen_global_ref(CompileState* state, char* name){
 int gen_ref(CompileState* state, char* name ){
 	int index;
 	SemanticRecord* frame = record_current_frame(state);
-
+    
     if(LOCSCOPE){
 		frame->fn->nlocals++;
         index = add_symbol(frame->display, name);
-         	
+        
 	}else{
-        gen_global_ref(state, name);
+        index = gen_global_ref(state, name);
 	}
-    RANDNUM++;
+    
     return index;
  }
  
@@ -318,7 +361,6 @@ void gen_return(CompileState* state){
 	ADD_INS(state, ins);
 }
 
-
 void gen_print_ins(CompileState* state, int format_index, int arity){
 	PrintfIns* ins = malloc(sizeof(PrintfIns));
 	ins->tag = PRINTF_OP;
@@ -328,7 +370,30 @@ void gen_print_ins(CompileState* state, int format_index, int arity){
 }
 
 char* gen_unique_name(char* name){
-	return concat(name, int_to_id(RANDNUM++));
+	char* res = concat(name, int_to_id(RANDNUM));
+	RANDNUM++;
+	return res;
+}
+
+void gen_branch(CompileState* state, int index){
+	BranchIns* ins = malloc(sizeof(BranchIns));
+	ins->tag = BRANCH_OP;
+	ins->name = index;
+	ADD_INS(state, ins);
+}
+
+void gen_goto(CompileState* state, int index) {
+	GotoIns* ins = malloc(sizeof(GotoIns));
+	ins->tag = GOTO_OP;
+	ins->name = index;
+	ADD_INS(state, ins);
+}
+
+void gen_label(CompileState* state, int index) {
+	LabelIns* ins = malloc(sizeof(LabelIns));
+	ins->tag = LABEL_OP;
+	ins->name = index;
+	ADD_INS(state, ins);
 }
 
 void compile_var_stmt(CompileState* state, ScopeVar* stmt){
@@ -398,7 +463,7 @@ int compile_program(CompileState* compile_state, ScopeStmt* stmt){
   
   emit_scopestmt(compile_state, stmt);
   Value* null = allocate_obj(NULL_VAL);
-  
+  gen_drop(compile_state);
   gen_lit_ins(compile_state, add_const(compile_state->constants, null));
   gen_return(compile_state);
   char* funcname = gen_unique_name("entry");
@@ -413,9 +478,8 @@ int compile_program(CompileState* compile_state, ScopeStmt* stmt){
 
 void compile_null_exp(CompileState* state){
     Value* null = allocate_obj(NULL_VAL);
-	gen_lit_ins(state, add_const(compile_state->constants, null));
+	gen_lit_ins(state, add_const(state->constants, null));
 }
-
 
 void compile_print_exp(CompileState* state, PrintfExp* exp){
 	for(int i = 0; i<exp->nexps; i++){
@@ -423,9 +487,35 @@ void compile_print_exp(CompileState* state, PrintfExp* exp){
 	}
 	int formatref = gen_global_ref(state, exp->format);
 	gen_print_ins(state, formatref, exp->nexps);
-	gen_drop(state);
+	
 }
 
+void compile_if_exp(CompileState* state, IfExp* exp){
+	int conseq = gen_ref(state, gen_unique_name("conseq"));
+	int end    = gen_ref(state, gen_unique_name("end"));
+	emit_exp(state, exp->pred);
+	gen_branch(state, conseq);
+	emit_scopestmt(state, exp->alt);
+	gen_goto(state, end);
+	gen_label(state, conseq);
+	emit_scopestmt(state, exp->conseq);
+	gen_label(state, end);
+	
+}
+
+void compile_while_exp(CompileState* state, WhileExp* exp){
+	int test = gen_ref(state, gen_unique_name("test"));
+	int loop = gen_ref(state, gen_unique_name("loop"));
+	gen_goto(state, test);
+	gen_label(state, loop);
+	emit_scopestmt(state, exp->body);
+	gen_drop(state);
+	gen_label(state, test);
+	emit_exp(state, exp->pred);
+	gen_branch(state, loop);
+	Value* null = allocate_obj(NULL_VAL);
+	gen_lit_ins(state, add_const(state->constants, null));	
+}
 
 void emit_exp ( CompileState* state, Exp* e) {
   
@@ -433,7 +523,6 @@ void emit_exp ( CompileState* state, Exp* e) {
   case INT_EXP:{
 	IntExp* e2 = (IntExp*)e;
 	compile_int_exp(state, e2);
-	
     break;
   }
   case NULL_EXP:{
@@ -442,7 +531,7 @@ void emit_exp ( CompileState* state, Exp* e) {
   }
   case PRINTF_EXP:{
     PrintfExp* e2 = (PrintfExp*)e;
-    compile_print_exp(state, e);
+    compile_print_exp(state, e2);
     break;
   }
   case ARRAY_EXP:{
@@ -501,23 +590,12 @@ void emit_exp ( CompileState* state, Exp* e) {
   }
   case IF_EXP:{
     IfExp* e2 = (IfExp*)e;
-    
-    printf("if ");
-    print_exp(e2->pred);
-    printf(" : (");
-    print_scopestmt(e2->conseq);
-    printf(") else : (");
-    print_scopestmt(e2->alt);
-    printf(")");
+    compile_if_exp(state, e2);
     break;
   }
   case WHILE_EXP:{
     WhileExp* e2 = (WhileExp*)e;
-    printf("while ");
-    print_exp(e2->pred);
-    printf(" : (");
-    print_scopestmt(e2->body);
-    printf(")");
+    compile_while_exp(state, e2);
     break;
   }
   case REF_EXP:{
